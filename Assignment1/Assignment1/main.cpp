@@ -5,6 +5,29 @@
 
 using namespace std;
 
+int bipartition(int dim, int i0, int iN, double **data, int cluster_start1, int cluster_start2, int cluster_size1, int cluster_size2, 
+	double *cluster_belry1, double *cluster_belry2, double *cluster_centroid1, double *cluster_centroid2, int *cluster_assign) {
+
+	cout << "min: " << *cluster_belry1 << endl;
+	cout << "max: " << *cluster_belry2 << endl;
+	return 0;
+}
+
+int kdtree(int dim, int ndata, double **data, int kk, int *cluster_start, int *cluster_size, double **cluster_belry, 
+	double **cluster_centroid, int *cluster_assign) {
+
+	int i, j = 0;
+
+	for (i = 0; i < kk-1; i++) {
+		for (j = 0; j < dim; j++) {
+			bipartition(j, 0, ndata, data, cluster_start[i], cluster_start[i+1], cluster_size[i], cluster_size[i+1], &cluster_belry[i][j * 2 + 1], 
+				&cluster_belry[i+1][j * 2], &cluster_centroid[i][j], &cluster_centroid[i+1][j], cluster_assign);
+		}
+	}
+
+	return 0;
+}
+
 int main()
 {
 	random_device rd;
@@ -83,6 +106,8 @@ int main()
 	cout << "Ndata: " << ndata << endl;
 	cout << "Kk: " << kk << endl;
 
+	kdtree(dim, ndata, data, kk, cluster_start, cluster_size, cluster_belry, cluster_centroid, cluster_assign);
+
 	free(cluster_start);
 	free(cluster_size);
 	free(cluster_assign);
@@ -92,12 +117,4 @@ int main()
 
 	getchar();
 
-}
-
-int kdtree(int dim, int ndata, double **data, int kk, int *cluster_start, int *cluster_size, double **cluster_belry, double **cluster_centroid, int *cluster_assign) {
-	return 0;
-}
-
-int bipartition(int dim, int i0, int iN, double **data, int cluster_start[2], int cluster_size[2], double *cluster_belry[2], double *cluster_centroid[2], int *cluster_assign) {
-	return 0;
 }
