@@ -2,8 +2,109 @@
 #include <ctime>
 #include <iostream>
 #include <random>
+#include <cmath>
 
+/* Let data point  (x1, x2, ... xd)
+   A cluster's bdry is (m1, M1, m2, M2, . . ., md, Md) */
+ 
 using namespace std;
+
+int bipartition(int dim, int i0, int iN, double **data, int cluster_start1, int cluster_start2, int cluster_size1, int cluster_size2, 
+	double *cluster_bdry1_min, double *cluster_bdry1_max, double *cluster_bdry2_min, double *cluster_bdry2_max, double *cluster_centroid1, 
+	double *cluster_centroid2, int *cluster_assign, int cluster1, int cluster2) {
+
+	return 0;
+
+}
+
+int kdtree(int dim, int ndata, double **data, int kk, int *cluster_start, int *cluster_size, double **cluster_bdry, 
+	double **cluster_centroid, int *cluster_assign) {
+	
+	int i = 0;
+	int j = 0;
+	int skip = 0;
+	int temp1, temp2 = 0;
+	int grind1, grind2 = 0;
+	int num = ndata;
+	int depth = pow(2, skip);
+	int kd_size = (kk - 1) * 2;
+	int *kdtree = (int*)calloc(kd_size, sizeof(int));
+	int *size = (int*)calloc(kd_size, sizeof(int));
+	int x = ndata;
+	double remainder = 0;
+
+	while (i < kd_size) {
+		if (j == kk) {
+			j = 0;
+			skip++;
+			depth = pow(2, skip);
+		}
+		kdtree[i] = j;
+		//cout << kdtree[i] << endl;
+		i++;
+		j = j + depth;
+	}
+
+	i = 0;
+	skip = skip + 2;
+
+	while (i < kd_size) {
+		if (kdtree[i] == 0) {
+			skip--;
+			j = pow(2, skip);
+		}
+		if (x % j != 0) {
+			remainder = ndata % 2;
+			x = x - remainder;
+		}
+		if (remainder != 0) {
+			size[i] = (ndata / j) + 1;
+			remainder--;
+		}
+		else {
+			size[i] = (ndata) / j;
+		}
+
+		//cout << size[i] << endl;
+
+		i++;
+	}
+
+	for (i = kd_size - 1; i >= 0; i = i - 2) {
+		temp1 = kdtree[i];
+		temp2 = kdtree[i - 1];
+		cluster_size[temp1] = size[i];
+		cluster_size[temp2] = size[i - 1];
+
+		if (num == 0 && temp2 == 0){
+			grind1 = 0;
+			grind2 = cluster_size[temp2] + cluster_size[temp1];
+		}
+		else {
+			grind2 = num;
+			num = num - cluster_size[temp2] - cluster_size[temp1];
+			grind1 = num;
+		}
+		cout << endl;
+		cout << "Grind1: " << grind1 << " Grind2: " << grind2 << endl;
+
+		for (j = 0; j < dim; j++) {
+			bipartition(j, grind1, grind2, data, cluster_start[temp2], cluster_start[temp1], cluster_size[temp2], cluster_size[temp1],
+				&cluster_bdry[temp2][j], &cluster_bdry[temp2][j + 1], &cluster_bdry[temp1][j], &cluster_bdry[temp1][j + 1], &cluster_centroid[temp2][j],
+				&cluster_centroid[temp1][j], cluster_assign, temp2, temp1);
+		}
+
+		if (num == 0) {
+			num = ndata;
+		}
+
+	}
+
+	delete[] kdtree;
+	delete[] size;
+
+	return 0;
+}
 
 int main()
 {
@@ -11,21 +112,21 @@ int main()
 
 	mt19937 randomGenerator(rd());
 
-	uniform_int_distribution<int> distributionDim(2, 8);
-	uniform_int_distribution<int> distributionNdata(10, 100);
-	uniform_real_distribution<double> distributionData(1, 100);
+	uniform_int_distribution<int> distributionDim(2, 3);
+	uniform_int_distribution<int> distributionNdata(2, 10);
+	uniform_real_distribution<double> distributionData(1, 10);
 	uniform_int_distribution<int> distributionKk(1, 4);
 
 	int i, j = 0;
-	int dim = distributionDim(randomGenerator);
-	int ndata = distributionNdata(randomGenerator);
-	int kk = 2 ^ distributionKk(randomGenerator);
+	int dim = 4;
+	int ndata = 24;
+	int kk = 8;
 	int *cluster_start = (int*)calloc(kk, sizeof(int));
 	int *cluster_size = (int*)calloc(kk, sizeof(int));
 	int *cluster_assign = (int*)calloc(ndata, sizeof(int));
 	double *sum = (double*)calloc(dim, sizeof(double));
 	double **data = (double**)calloc(ndata, sizeof(double));
-	double **cluster_belry = (double**)calloc(kk, sizeof(double));
+	double **cluster_bdry = (double**)calloc(kk, sizeof(double));
 	double **cluster_centroid = (double**)calloc(kk, sizeof(double));
 
 	for (i = 0; i < ndata; i++) {
@@ -33,7 +134,7 @@ int main()
 	}
 
 	for (i = 0; i < kk; i++) {
-		cluster_belry[i] = (double*)calloc(dim*2, sizeof(double));
+		cluster_bdry[i] = (double*)calloc(dim*2, sizeof(double));
 		cluster_centroid[i] = (double *)calloc(dim, sizeof(double));
 	}
 
@@ -49,14 +150,14 @@ int main()
 			sum[j] = sum[j] + data[i][j];
 
 			if (i == 0) {
-				cluster_belry[0][j * 2] = *&data[i][j];
-				cluster_belry[0][j * 2 + 1] = *&data[i][j];
+				cluster_bdry[0][j * 2] = data[i][j];
+				cluster_bdry[0][j * 2 + 1] = data[i][j];
 			}
-			else if (cluster_belry[0][j * 2] > data[i][j]) {
-				cluster_belry[0][j * 2] = *&data[i][j];
+			else if (cluster_bdry[0][j * 2] > data[i][j]) {
+				cluster_bdry[0][j * 2] = data[i][j];
 			}
-			else if (cluster_belry[0][j * 2 + 1] < data[i][j]) {
-				cluster_belry[0][j * 2 + 1] = *&data[i][j];
+			else if (cluster_bdry[0][j * 2 + 1] < data[i][j]) {
+				cluster_bdry[0][j * 2 + 1] = data[i][j];
 			}
 		}
 		cout << endl;
@@ -66,7 +167,7 @@ int main()
 
 	cout << "Cluster Boundaries" << endl;
 	for (i = 0; i < dim*2; i++) {
-		cout << cluster_belry[0][i] << " ";
+		cout << cluster_bdry[0][i] << " ";
 	}
 	cout << endl;
 	cout << "------------------------------" << endl;
@@ -83,21 +184,15 @@ int main()
 	cout << "Ndata: " << ndata << endl;
 	cout << "Kk: " << kk << endl;
 
-	free(cluster_start);
-	free(cluster_size);
-	free(cluster_assign);
-	free(data);
-	free(cluster_belry);
-	free(cluster_centroid);
+	kdtree(dim, ndata, data, kk, cluster_start, cluster_size, cluster_bdry, cluster_centroid, cluster_assign);
+
+	delete[] cluster_start;
+	delete[] cluster_size;
+	delete[] sum;
+	delete[] cluster_bdry;
+	delete[] cluster_assign;
+	delete[] data;
 
 	getchar();
 
-}
-
-int kdtree(int dim, int ndata, double **data, int kk, int *cluster_start, int *cluster_size, double **cluster_belry, double **cluster_centroid, int *cluster_assign) {
-	return 0;
-}
-
-int bipartition(int dim, int i0, int iN, double **data, int cluster_start[2], int cluster_size[2], double *cluster_belry[2], double *cluster_centroid[2], int *cluster_assign) {
-	return 0;
 }
