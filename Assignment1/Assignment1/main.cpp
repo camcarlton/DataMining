@@ -4,25 +4,17 @@
 #include <random>
 #include <cmath>
 
+/* Let data point  (x1, x2, ... xd)
+   A cluster's bdry is (m1, M1, m2, M2, . . ., md, Md) */
+ 
 using namespace std;
 
 int bipartition(int dim, int i0, int iN, double **data, int cluster_start1, int cluster_start2, int cluster_size1, int cluster_size2, 
 	double *cluster_bdry1_min, double *cluster_bdry1_max, double *cluster_bdry2_min, double *cluster_bdry2_max, double *cluster_centroid1, 
 	double *cluster_centroid2, int *cluster_assign, int cluster1, int cluster2) {
 
-	int max_iterations = ((iN - i0) * 2);
-	int i = i0;
-	int count = 0;
-	cout << "New call " << cluster1 << " " << cluster2 << " " << i0 << " " << iN << endl;
-	while (i < max_iterations) {
-		if (count == 0 && i == iN) {
-			iN = (iN - i0) + iN;
-		}
-		cout << i << endl;
-		i++;
-	}
-	cout << "----End of call----" << endl;
 	return 0;
+
 }
 
 int kdtree(int dim, int ndata, double **data, int kk, int *cluster_start, int *cluster_size, double **cluster_bdry, 
@@ -48,7 +40,7 @@ int kdtree(int dim, int ndata, double **data, int kk, int *cluster_start, int *c
 			depth = pow(2, skip);
 		}
 		kdtree[i] = j;
-		cout << kdtree[i] << endl;
+		//cout << kdtree[i] << endl;
 		i++;
 		j = j + depth;
 	}
@@ -73,7 +65,7 @@ int kdtree(int dim, int ndata, double **data, int kk, int *cluster_start, int *c
 			size[i] = (ndata) / j;
 		}
 
-		cout << size[i] << endl;
+		//cout << size[i] << endl;
 
 		i++;
 	}
@@ -89,15 +81,15 @@ int kdtree(int dim, int ndata, double **data, int kk, int *cluster_start, int *c
 			grind2 = cluster_size[temp2] + cluster_size[temp1];
 		}
 		else {
-			grind1 = num;
-			num = num - cluster_size[temp2] - cluster_size[temp1];
 			grind2 = num;
+			num = num - cluster_size[temp2] - cluster_size[temp1];
+			grind1 = num;
 		}
-
-		cout << grind1 << grind2 << endl;
+		cout << endl;
+		cout << "Grind1: " << grind1 << " Grind2: " << grind2 << endl;
 
 		for (j = 0; j < dim; j++) {
-			bipartition(j, grind2, grind1, data, cluster_start[temp2], cluster_start[temp1], cluster_size[temp2], cluster_size[temp1],
+			bipartition(j, grind1, grind2, data, cluster_start[temp2], cluster_start[temp1], cluster_size[temp2], cluster_size[temp1],
 				&cluster_bdry[temp2][j], &cluster_bdry[temp2][j + 1], &cluster_bdry[temp1][j], &cluster_bdry[temp1][j + 1], &cluster_centroid[temp2][j],
 				&cluster_centroid[temp1][j], cluster_assign, temp2, temp1);
 		}
