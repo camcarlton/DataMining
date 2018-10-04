@@ -8,6 +8,8 @@
 /* Let data point  (x1, x2, ... xd)
    A cluster's bdry is (m1, M1, m2, M2, . . ., md, Md) */
  
+//Variance is not correct.
+
 using namespace std;
 
 void print(int dim, int ndata, double **data, int kk, int *cluster_start, int *cluster_size, double **cluster_bdry,
@@ -46,25 +48,30 @@ double calculateMean(int dim, int i0, int iN, double **data, double *mean) {
 
 	for (i = 0; i < dim; i++) {
 		mean[i] = mean[i] / iN;
+
+		cout << "Mean for dim " << i << " " << mean[i] << endl;
 	}
+	cout << endl;
 
 	return *mean;
 }
 
 double calculateVariance(int dim, int i0, int iN, double *mean, double **data, double *variance) {
 	int i, j = 0;
-	double new_data = 0;
 
 	for (i = i0; i < iN; i++) {
 		for (j = 0; j < dim; j++) {
+
 			variance[j] += (data[i][j] - mean[j]) * (data[i][j] - mean[j]);
 		}
-	
 	}
 
 	for (i = 0; i < dim; i++) {
-		variance[i] = variance[i] / iN;
+		variance[i] /= iN;
+
+		cout << "Variance for dim " << i << " " << variance[i] << endl;
 	}
+	cout << endl;
 
 	return *variance;
 }
@@ -84,6 +91,8 @@ int maxVariance(int dim, double *variance) {
 			max_dim = i;
 		}
 	}
+
+	cout << "Max variance was dim " << max_dim << endl;
 
 	return max_dim;
 }
@@ -216,11 +225,15 @@ int kdtree(int dim, int ndata, double **data, int kk, int *cluster_start, int *c
 	}
 
 	for (i = kd_size - 1; i >= 0; i = i - 2) {
+		double *mean = (double*)calloc(dim, sizeof(int));
+		double *variance = (double*)calloc(dim, sizeof(int));
 		temp1 = kdtree[i-1];
 		temp2 = kdtree[i];
 		sizeTotal = cluster_size[temp1];
 		start = cluster_start[temp1];
 		end = start + sizeTotal;
+
+		cout << "\tCluster 1: " << temp1 << "\tCluster 2: " << temp2 << endl;
 
 		*cluster_centroid[temp1] = calculateMean(dim, start, end, data, mean);
 		*variance = calculateVariance(dim, start, end, cluster_centroid[temp1], data, variance);
@@ -229,12 +242,12 @@ int kdtree(int dim, int ndata, double **data, int kk, int *cluster_start, int *c
 		*cluster_assign = assignCluster(start, end, max_dim, mean[max_dim], data, temp1, temp2, cluster_assign);
 		*cluster_size, *cluster_start = defineCluster(start, end, cluster_assign, temp1, temp2, cluster_size, cluster_start);
 		**cluster_bdry = clusterBoundry(dim, start, end, cluster_assign, temp1, temp2, data, cluster_bdry);
+	
+		delete[] mean;
+		delete[] variance;
 	}
 
-	print(dim, ndata, data, kk, cluster_start, cluster_size, cluster_bdry, cluster_centroid, cluster_assign);
-
-	delete[] mean;
-	delete[] variance;
+	//print(dim, ndata, data, kk, cluster_start, cluster_size, cluster_bdry, cluster_centroid, cluster_assign);
 
 	return 0;
 }
@@ -247,18 +260,29 @@ int main()
 
 	uniform_int_distribution<int> distributionDim(2, 3);
 	uniform_int_distribution<int> distributionNdata(2, 10);
-	uniform_real_distribution<double> distributionData(1, 100);
+	uniform_real_distribution<double> distributionData(1, 10);
 	uniform_int_distribution<int> distributionKk(1, 4);
 
 	int i, j = 0;
 	int dim = 4;
-	int ndata = 100;
+	int ndata = 10;
 	int kk = 8;
 	int *cluster_start = (int*)calloc(kk, sizeof(int));
 	int *cluster_size = (int*)calloc(kk, sizeof(int));
 	int *cluster_assign = (int*)calloc(ndata, sizeof(int));
 	double *variance = (double*)calloc(dim, sizeof(double));
 	double **data = (double**)calloc(ndata, sizeof(double));
+	double dataArray[10][4] = { {1.84616, 5.39192, 7.26049, 2.4418},
+	{7.67624, 5.10244, 2.27283, 3.51578},
+	{5.64884, 9.94672, 7.98212, 2.28034},
+	{7.80222, 9.94688, 8.59018, 5.63289},
+	{2.32869, 6.49689, 8.33706, 6.69262},
+	{9.9111, 6.86782, 9.27055, 4.3683},
+	{7.79681, 2.60818, 9.95777, 5.40518},
+	{3.76118, 1.47607, 5.53045, 4.35508},
+	{8.33199, 2.05836, 6.37516, 4.66617},
+	{9.73409, 6.24809, 1.47851, 6.39988} };
+
 	double **cluster_bdry = (double**)calloc(kk, sizeof(double));
 	double **cluster_centroid = (double**)calloc(kk, sizeof(double));
 
@@ -275,7 +299,11 @@ int main()
 
 	for (i = 0; i < ndata; i++) {
 		for (j = 0; j < dim; j++) {
-			data[i][j] = distributionData(randomGenerator);
+			//data[i][j] = distributionData(randomGenerator);
+			data[i][j] = dataArray[i][j];
+
+
+			//cout << data[i][j] << " ";
 
 			if (i == 0) {
 				cluster_bdry[0][j * 2] = data[i][j];
@@ -288,6 +316,8 @@ int main()
 				cluster_bdry[0][j * 2 + 1] = data[i][j];
 			}
 		}
+
+		//cout << endl;
 	}
 
 	kdtree(dim, ndata, data, kk, cluster_start, cluster_size, cluster_bdry, cluster_centroid, cluster_assign);
