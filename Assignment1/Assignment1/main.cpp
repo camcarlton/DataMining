@@ -3,18 +3,198 @@
 #include <iostream>
 #include <random>
 #include <cmath>
+#include <algorithm>
 
 /* Let data point  (x1, x2, ... xd)
    A cluster's bdry is (m1, M1, m2, M2, . . ., md, Md) */
  
+//Variance is not correct.
+
 using namespace std;
 
-int bipartition(int dim, int i0, int iN, double **data, int cluster_start1, int cluster_start2, int cluster_size1, int cluster_size2, 
-	double *cluster_bdry1_min, double *cluster_bdry1_max, double *cluster_bdry2_min, double *cluster_bdry2_max, double *cluster_centroid1, 
-	double *cluster_centroid2, int *cluster_assign, int cluster1, int cluster2) {
+void print(int dim, int ndata, double **data, int kk, int *cluster_start, int *cluster_size, double **cluster_bdry,
+	double **cluster_centroid, int *cluster_assign) {
 
-	return 0;
+  	int i, j = 0;
 
+	for (i = 0; i < kk; i++) {
+		cout << "--Cluster " << i << "--" << endl;
+		cout << "Start " << cluster_start[i] << endl;
+		cout << "Size " << cluster_size[i] << endl;
+
+		for (j = 0; j < dim; j++) {
+			cout << "----Dim " << j << "----" << endl;
+			cout << "Min " << cluster_bdry[i][j * 2] << endl;
+			cout << "Max " << cluster_bdry[i][j * 2 + 1] << endl;
+			cout << "Centroid " << cluster_centroid[i][j] << endl;
+		}
+	}
+
+	/*int i = 0;
+
+	for (i = 0; i < ndata; i++) {
+		cout << "cluster_assign slot " << i << " holds " << cluster_assign[i] << endl;
+	}*/
+}
+
+double calculateMean(int dim, int i0, int iN, double **data, double *mean) {
+	int i, j = 0;
+
+	for (i = i0; i < iN; i++) {
+		for (j = 0; j < dim; j++) {
+			mean[j] = mean[j] + data[i][j];
+		}
+	}
+
+	for (i = 0; i < dim; i++) {
+		mean[i] = mean[i] / iN;
+
+		cout << "Mean for dim " << i << " " << mean[i] << endl;
+	}
+	cout << endl;
+
+	return *mean;
+}
+
+double calculateVariance(int dim, int i0, int iN, double *mean, double **data, double *variance) {
+	int i, j = 0;
+
+	for (i = i0; i < iN; i++) {
+		for (j = 0; j < dim; j++) {
+
+			variance[j] += (data[i][j] - mean[j]) * (data[i][j] - mean[j]);
+		}
+	}
+
+	for (i = 0; i < dim; i++) {
+		variance[i] /= iN;
+
+		cout << "Variance for dim " << i << " " << variance[i] << endl;
+	}
+	cout << endl;
+
+	return *variance;
+}
+
+int maxVariance(int dim, double *variance) {
+	int i = 0;
+	double max = 0;
+	int max_dim = -1;
+
+	for (i = 0; i < dim; i++) {
+		if (i == 0) {
+			max = variance[i];
+			max_dim = i;
+		}
+		else if (max < variance[i]) {
+			max = variance[i];
+			max_dim = i;
+		}
+	}
+
+	cout << "Max variance was dim " << max_dim << endl;
+
+	return max_dim;
+}
+
+double sortAcsending(int dim, int i0, int iN, int max_dim, double **data) {
+	int i = 0;
+	int j = 0;
+	int count = 0;
+
+	while (i < iN-1) {
+		if (data[i][max_dim] > data[i + 1][max_dim]) {
+			for (j = 0; j < dim; j++) {
+				int temp = data[i][j];
+				data[i][j] = data[i + 1][j];
+				data[i + 1][j] = temp;
+			}
+			count++;
+		}
+		if (i == iN-2 && count != 0) {
+			i = 0;
+			count = 0;
+		}
+		else {
+			i++;
+		}
+	}
+
+	return **data;
+}
+
+int assignCluster(int i0, int iN, int max_dim, double mean, double **data, int cluster1, int cluster2, int *cluster_assign) {
+	int i = 0;
+
+	for (i = i0; i < iN; i++) {
+		if (data[i][max_dim] > mean) {
+			cluster_assign[i] = cluster2;
+		}
+		else if (data[i][max_dim] < mean) {
+			cluster_assign[i] = cluster1;
+		}
+
+		//cout << "i = " << cluster_assign[i] << endl;
+		
+	}
+	cout << endl;
+	return *cluster_assign;
+}
+
+int defineCluster(int i0, int iN, int *cluster_assign, int cluster1, int cluster2, int *cluster_size, int *cluster_start) {
+	int i = 0;
+	cluster_size[cluster1] = 0;
+	cluster_size[cluster2] = 0;
+
+	for (i = i0; i < iN; i++) {
+		if (cluster_assign[i] == cluster1 and cluster_size[cluster1] == 0) {
+			cluster_size[cluster1]++;
+			cluster_start[cluster1] = i;
+		}
+		else if (cluster_assign[i] == cluster1) {
+			cluster_size[cluster1]++;
+		}
+		else if (cluster_assign[i] == cluster2 and cluster_size[cluster2] == 0) {
+			cluster_size[cluster2]++;
+			cluster_start[cluster2] = i;
+		}
+		else if (cluster_assign[i] == cluster2) {
+			cluster_size[cluster2]++;
+		}
+	}
+
+	return *cluster_size, *cluster_start;
+}
+
+double clusterBoundry(int dim, int i0, int iN, int *cluster_assign, int cluster1, int cluster2, double **data, double **cluster_bdry) {
+	int i = 0;
+	int j = 0;
+
+	for (i = 0; i < dim; i++) {
+		cluster_bdry[cluster1][i] = data[i0][i];
+		cluster_bdry[cluster1][i + 1] = data[i0][i];
+
+		for (j = i0; j < iN; j++) {
+			if (cluster_assign[j] == cluster1) {
+				if (cluster_bdry[cluster1][i] > data[j][i]) {
+					cluster_bdry[cluster1][i] = data[j][i];
+				}
+				else if (cluster_bdry[cluster1][i + 1] < data[j][i]) {
+					cluster_bdry[cluster1][i + 1] = data[j][i];
+				}
+			}
+			else if (cluster_assign[j] == cluster2) {
+				if (cluster_bdry[cluster2][i] > data[j][i]) {
+					cluster_bdry[cluster2][i] = data[j][i];
+				}
+				else if (cluster_bdry[cluster2][i + 1] < data[j][i]) {
+					cluster_bdry[cluster2][i + 1] = data[j][i];
+				}
+			}
+		}
+	}
+
+	return **cluster_bdry;
 }
 
 int kdtree(int dim, int ndata, double **data, int kk, int *cluster_start, int *cluster_size, double **cluster_bdry, 
@@ -22,86 +202,52 @@ int kdtree(int dim, int ndata, double **data, int kk, int *cluster_start, int *c
 	
 	int i = 0;
 	int j = 0;
-	int skip = 0;
+	int max_dim = 0;
+	int depth = 0;
 	int temp1, temp2 = 0;
-	int grind1, grind2 = 0;
-	int num = ndata;
-	int depth = pow(2, skip);
+	int start, end = 0;
+	int sizeTotal = 0;
+	int stride = pow(2, depth);
 	int kd_size = (kk - 1) * 2;
 	int *kdtree = (int*)calloc(kd_size, sizeof(int));
-	int *size = (int*)calloc(kd_size, sizeof(int));
-	int x = ndata;
-	double remainder = 0;
+	double *mean = (double*)calloc(dim, sizeof(int));
+	double *variance = (double*)calloc(dim, sizeof(int));
 
 	while (i < kd_size) {
 		if (j == kk) {
 			j = 0;
-			skip++;
-			depth = pow(2, skip);
+			depth++;
+			stride = pow(2, depth);
 		}
 		kdtree[i] = j;
-		//cout << kdtree[i] << endl;
 		i++;
-		j = j + depth;
-	}
-
-	i = 0;
-	skip = skip + 2;
-
-	while (i < kd_size) {
-		if (kdtree[i] == 0) {
-			skip--;
-			j = pow(2, skip);
-		}
-		if (x % j != 0) {
-			remainder = ndata % 2;
-			x = x - remainder;
-		}
-		if (remainder != 0) {
-			size[i] = (ndata / j) + 1;
-			remainder--;
-		}
-		else {
-			size[i] = (ndata) / j;
-		}
-
-		//cout << size[i] << endl;
-
-		i++;
+		j = j + stride;
 	}
 
 	for (i = kd_size - 1; i >= 0; i = i - 2) {
-		temp1 = kdtree[i];
-		temp2 = kdtree[i - 1];
-		cluster_size[temp1] = size[i];
-		cluster_size[temp2] = size[i - 1];
+		double *mean = (double*)calloc(dim, sizeof(int));
+		double *variance = (double*)calloc(dim, sizeof(int));
+		temp1 = kdtree[i-1];
+		temp2 = kdtree[i];
+		sizeTotal = cluster_size[temp1];
+		start = cluster_start[temp1];
+		end = start + sizeTotal;
 
-		if (num == 0 && temp2 == 0){
-			grind1 = 0;
-			grind2 = cluster_size[temp2] + cluster_size[temp1];
-		}
-		else {
-			grind2 = num;
-			num = num - cluster_size[temp2] - cluster_size[temp1];
-			grind1 = num;
-		}
-		cout << endl;
-		cout << "Grind1: " << grind1 << " Grind2: " << grind2 << endl;
+		cout << "\tCluster 1: " << temp1 << "\tCluster 2: " << temp2 << endl;
 
-		for (j = 0; j < dim; j++) {
-			bipartition(j, grind1, grind2, data, cluster_start[temp2], cluster_start[temp1], cluster_size[temp2], cluster_size[temp1],
-				&cluster_bdry[temp2][j], &cluster_bdry[temp2][j + 1], &cluster_bdry[temp1][j], &cluster_bdry[temp1][j + 1], &cluster_centroid[temp2][j],
-				&cluster_centroid[temp1][j], cluster_assign, temp2, temp1);
-		}
-
-		if (num == 0) {
-			num = ndata;
-		}
-
+		*cluster_centroid[temp1] = calculateMean(dim, start, end, data, mean);
+		*variance = calculateVariance(dim, start, end, cluster_centroid[temp1], data, variance);
+		max_dim = maxVariance(dim, variance);
+		**data = sortAcsending(dim, start, end, max_dim, data);
+		*cluster_assign = assignCluster(start, end, max_dim, mean[max_dim], data, temp1, temp2, cluster_assign);
+		*cluster_size, *cluster_start = defineCluster(start, end, cluster_assign, temp1, temp2, cluster_size, cluster_start);
+		**cluster_bdry = clusterBoundry(dim, start, end, cluster_assign, temp1, temp2, data, cluster_bdry);
+	
+		delete[] mean;
+		delete[] variance;
 	}
 
-	delete[] kdtree;
-	delete[] size;
+	//print(dim, ndata, data, kk, cluster_start, cluster_size, cluster_bdry, cluster_centroid, cluster_assign);
 
 	return 0;
 }
@@ -119,13 +265,24 @@ int main()
 
 	int i, j = 0;
 	int dim = 4;
-	int ndata = 24;
+	int ndata = 10;
 	int kk = 8;
 	int *cluster_start = (int*)calloc(kk, sizeof(int));
 	int *cluster_size = (int*)calloc(kk, sizeof(int));
 	int *cluster_assign = (int*)calloc(ndata, sizeof(int));
-	double *sum = (double*)calloc(dim, sizeof(double));
+	double *variance = (double*)calloc(dim, sizeof(double));
 	double **data = (double**)calloc(ndata, sizeof(double));
+	double dataArray[10][4] = { {1.84616, 5.39192, 7.26049, 2.4418},
+	{7.67624, 5.10244, 2.27283, 3.51578},
+	{5.64884, 9.94672, 7.98212, 2.28034},
+	{7.80222, 9.94688, 8.59018, 5.63289},
+	{2.32869, 6.49689, 8.33706, 6.69262},
+	{9.9111, 6.86782, 9.27055, 4.3683},
+	{7.79681, 2.60818, 9.95777, 5.40518},
+	{3.76118, 1.47607, 5.53045, 4.35508},
+	{8.33199, 2.05836, 6.37516, 4.66617},
+	{9.73409, 6.24809, 1.47851, 6.39988} };
+
 	double **cluster_bdry = (double**)calloc(kk, sizeof(double));
 	double **cluster_centroid = (double**)calloc(kk, sizeof(double));
 
@@ -139,15 +296,14 @@ int main()
 	}
 
 	cluster_size[0] = ndata;
-	cout << "------------------------------" << endl;
-	cout << "Data Set" << endl;
+
 	for (i = 0; i < ndata; i++) {
-		cout << i << "- ";
 		for (j = 0; j < dim; j++) {
-			data[i][j] = distributionData(randomGenerator);
-			cout << data[i][j] << " ";
-			
-			sum[j] = sum[j] + data[i][j];
+			//data[i][j] = distributionData(randomGenerator);
+			data[i][j] = dataArray[i][j];
+
+
+			//cout << data[i][j] << " ";
 
 			if (i == 0) {
 				cluster_bdry[0][j * 2] = data[i][j];
@@ -160,35 +316,15 @@ int main()
 				cluster_bdry[0][j * 2 + 1] = data[i][j];
 			}
 		}
-		cout << endl;
+
+		//cout << endl;
 	}
-
-	cout << "------------------------------" << endl;
-
-	cout << "Cluster Boundaries" << endl;
-	for (i = 0; i < dim*2; i++) {
-		cout << cluster_bdry[0][i] << " ";
-	}
-	cout << endl;
-	cout << "------------------------------" << endl;
-
-	cout << "Cluster Centroids" << endl;
-	for (i = 0; i < dim; i++) {
-		cluster_centroid[0][i] = sum[i] / ndata;
-		cout << cluster_centroid[0][i] << " ";
-	}
-	cout << endl;
-	cout << "------------------------------" << endl;
-
-	cout << "Dimensions: " << dim << endl;
-	cout << "Ndata: " << ndata << endl;
-	cout << "Kk: " << kk << endl;
 
 	kdtree(dim, ndata, data, kk, cluster_start, cluster_size, cluster_bdry, cluster_centroid, cluster_assign);
 
 	delete[] cluster_start;
 	delete[] cluster_size;
-	delete[] sum;
+	delete[] variance;
 	delete[] cluster_bdry;
 	delete[] cluster_assign;
 	delete[] data;
