@@ -16,7 +16,6 @@ void reassignment(int datapoint, int ndata, int dim, int old_cluster, int new_cl
 
 	//current datapoint is the start for the old_cluster and there is only one datapoint in that cluster
 	if (cluster_start[old_cluster] == datapoint and cluster_size[old_cluster] == 1) {
-		cluster_size[old_cluster] = 0;
 		cluster_start[old_cluster] = -1;
 		cluster_radius[old_cluster] = 0;
 	}
@@ -70,7 +69,6 @@ bool nearestCluster(int dim, int ndata, int k, int datapoint, double *data, vect
 	int nearestCluster = -1;
 	int old_cluster = cluster_assign[datapoint];
 	double distance = 0.0;
-	double radius = 0;
 	double minDistance = numeric_limits<double>::infinity();
 	bool assignmentChange = false;
 
@@ -81,7 +79,6 @@ bool nearestCluster(int dim, int ndata, int k, int datapoint, double *data, vect
 		distance = sqrt(distance);
 
 		if (minDistance > distance) {
-			radius = distance;
 			minDistance = distance;
 			nearestCluster = x;
 		}
@@ -239,6 +236,7 @@ void print(int dim, int ndata, int k, vector<int> &cluster_start, vector<int> &c
 int kmeans(int dim, int ndata, double **data, int k, vector<int> &cluster_start, vector<int> &cluster_size, vector<double> &cluster_radius, vector<vector<double> > &cluster_centroid){
 	int i;
 	bool exit = false;
+	int count = 0;
 	vector<int> cluster_assign(ndata, -1);
 
 	intial_centers(dim, ndata, data, k, cluster_centroid);
@@ -246,8 +244,6 @@ int kmeans(int dim, int ndata, double **data, int k, vector<int> &cluster_start,
 	for (i = 0; i < ndata; i++) {
 		intialNearestCluster(dim, k, i, data[i], cluster_start, cluster_size, cluster_assign, cluster_radius, cluster_centroid);
 	}
-
-	print(dim, ndata, k, cluster_start, cluster_size, cluster_assign, data, cluster_radius, cluster_centroid);
 
 	while (!exit){
 		for (i = 0; i < k; i++) {
@@ -258,13 +254,19 @@ int kmeans(int dim, int ndata, double **data, int k, vector<int> &cluster_start,
 		for (i = 0; i < ndata; i++) {
 			exit = nearestCluster(dim, ndata, k, i, data[i], cluster_start, cluster_size, cluster_assign, cluster_radius, cluster_centroid);
 		}
-
-		print(dim, ndata, k, cluster_start, cluster_size, cluster_assign, data, cluster_radius, cluster_centroid);
 	}
 
+	for (i = 0; i < k; i++) {
+		if (cluster_size[i] != 0) {
+			count += 1;
+		}
+	}
+
+	print(dim, ndata, k, cluster_start, cluster_size, cluster_assign, data, cluster_radius, cluster_centroid);
+	
 	vector<int>().swap(cluster_assign);
 
-	return 0;
+	return count;
 }
 
 int main()
@@ -272,14 +274,14 @@ int main()
 	random_device rd;
 	mt19937 randomGenerator(rd());
 	uniform_int_distribution<int> distributionDim(3, 8);
-	uniform_int_distribution<int> distributionNdata(10, 1000);
+	uniform_int_distribution<int> distributionNdata(100, 10000);
 	uniform_real_distribution<double> distributionData(10, 100);
 	uniform_real_distribution<double> distributionW(0, 1);
 
 	int i, j;
-	int dim = 4;
-	int ndata = 15;
-	int k = 6;
+	int dim = distributionDim(randomGenerator);
+	int ndata = distributionNdata(randomGenerator);
+	int k = 100;
 	double **data = (double**)calloc(ndata, sizeof(double));
 
 	vector<int> cluster_start(k, 0);
@@ -299,8 +301,8 @@ int main()
 			data[i][j] = distributionData(randomGenerator);
 		}
 	}
-
-	kmeans(dim, ndata, data, k, cluster_start, cluster_size, cluster_radius, cluster_centroid);
+	
+	cout << "\n" << kmeans(dim, ndata, data, k, cluster_start, cluster_size, cluster_radius, cluster_centroid) << " non-empty clusters found" << endl;
 
 	vector<int>().swap(cluster_start);
 	vector<int>().swap(cluster_size);
